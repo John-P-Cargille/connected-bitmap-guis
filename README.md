@@ -1,0 +1,14 @@
+This project from my object-oriented programming class tasked us with first creating, then editing, and then connecting the edits of a number of bitmaps, using java GUIs to display them. These stages of the project are saved in stage-1, stage-2, and main branches respectively.
+
+In the first stage of the project, we were chiefly concerned with creating and exporting a bitmap created in the driver. This included creating an Icon composed of Pixels which could get and set their color using bitwise operations on a single stored integer, and having a BitMapCreator which could convert the icon to a .BPM file for export. This stage helped introduce me to exporting files in a particular format and highlighted the usefulness of abstracting private method details away (such as the bitwise operations in Pixel).
+
+In the second stage of the project, we moved to representing our bitmap using a GUI in order to edit it live before saving it as a file. This included using java.awt and javax.swing to set up and arrange GUI elements, saving and loading the user's last five used colors, creating the BitMapDeconstructor to convert a .BMP into an Icon, representing an underlying icon using a grid of PixelButtons, and creating a BitMapGui class to listen for color changes, slider changes, textbox updates, and button presses. I failed to fully implement the bitmap import functionality in this stage, which helped me re-evaluate how to approach my software-creation timelines in the future.
+
+In the third stage of the project, we added multiple windows, each with their own bitmap GUI which could communicate with the others using the Observer and Decorator Patterns. This included creating an IconEdit object to serve as the Subject for a number of BitMapGui Observers (which could be connected and disconnected from each other), wrapping those calls to IconEdits using Decorators on any received edits based on the options selected in a given BitMapGui, updating the BitMapGui class to differentiate between an edit made to itself and an edit made by another window, and adding in functionality for a rapid fill using the shift key and a MouseListener. This last stage made this project the most complicated I had written up to that point with its many interconnected patterns, interfaces, parent classes, graphical elements, and connection to the file system.
+
+For further reading:
+[Bitmaps](https://en.wikipedia.org/wiki/Bitmap)
+[java.awt](https://docs.oracle.com/javase/8/docs/api/java/awt/package-summary.html)
+[javax.swing](https://docs.oracle.com/javase/8/docs/api/javax/swing/package-summary.html)
+[Observer Pattern Introduction](https://www.geeksforgeeks.org/system-design/observer-pattern-set-1-introduction/)
+[Decorator Pattern Introduction](https://www.geeksforgeeks.org/system-design/decorator-pattern/)
