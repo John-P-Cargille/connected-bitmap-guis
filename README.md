@@ -6,9 +6,9 @@ In the second stage of the project, we moved to representing our bitmap using a 
 
 In the third stage of the project, we added multiple windows, each with their own bitmap GUI which could communicate with the others using the Observer and Decorator Patterns. This included creating an IconEdit object to serve as the Subject for a number of BitMapGui Observers (which could be connected and disconnected from each other), wrapping those calls to IconEdits using Decorators on any received edits based on the options selected in a given BitMapGui, updating the BitMapGui class to differentiate between an edit made to itself and an edit made by another window, and adding in functionality for a rapid fill using the shift key and a MouseListener. This last stage made this project the most complicated I had written up to that point with its many interconnected patterns, interfaces, parent classes, graphical elements, and connection to the file system.
 
-For further reading:
-[Bitmaps](https://en.wikipedia.org/wiki/Bitmap)
-[java.awt](https://docs.oracle.com/javase/8/docs/api/java/awt/package-summary.html)
-[javax.swing](https://docs.oracle.com/javase/8/docs/api/javax/swing/package-summary.html)
-[Observer Pattern Introduction](https://www.geeksforgeeks.org/system-design/observer-pattern-set-1-introduction/)
+For further reading: \
+[Bitmaps](https://en.wikipedia.org/wiki/Bitmap) \
+[java.awt](https://docs.oracle.com/javase/8/docs/api/java/awt/package-summary.html) \
+[javax.swing](https://docs.oracle.com/javase/8/docs/api/javax/swing/package-summary.html) \
+[Observer Pattern Introduction](https://www.geeksforgeeks.org/system-design/observer-pattern-set-1-introduction/) \
 [Decorator Pattern Introduction](https://www.geeksforgeeks.org/system-design/decorator-pattern/)
