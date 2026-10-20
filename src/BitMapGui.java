@@ -7,27 +7,27 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseEvent;
 import java.io.File;
 
 //The Graphical User Interface for a BitMap Editor
-public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, ActionListener {
+public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, ActionListener, MouseListener, Observer {
 
     //The underlying icon to the grid
     private Icon guiIcon;
-    //A BitMapCreator to export the finished BitMap
-    private BitMapCreator guiBitMapCreator;
-    //A BitMapDeconstructor to import BitMaps
-    private BitMapDeconstructor guiBitMapDeconstructor;
+    //The IconEdit which the GUI observes
+    private IconEdit iconEdit;
     //A collection of PixelButtons
     private JPanel grid;
     //The last five colors used by the user
     private LastFiveColors lastFiveColorsWidget;
     //A 2d Arraylist of PixelButtons mirroring the grid
     private ArrayList < ArrayList < PixelButton > > pixelButtons;
+    //A state for if this GUI is the source of a given color change
+    private boolean isSourceOfEdit;
     //The current color selected by the user
     private Color currentColor;
-    //A state for whether or not the advanced CheckBox is checked
-    private boolean advancedCbIsChecked;
     //The slider for the red value
     private JSlider redSlider;
     //The textbox for the red value
@@ -48,44 +48,40 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
     private JLabel blueLabel;
     //A preview of the currentColor
     private JLabel previewColor;
-    //The advanced options checkbox
-    private JCheckBox advancedCB;
-    //A dialog for the advanced options
-    private JDialog advancedDialog;
-    //The row number of the PixelButton clicked which opens the advancedDialog
-    private JTextField advancedRowNumTB;
-    //The column number of the PixelButton clicked which opens the advancedDialog
-    private JTextField advancedColumnNumTB;
-    //The button which fills in the advanced dialog
-    private JButton advancedFillButton;
-    //The button which selects a file to import
-    private JButton advancedImportSelectButton;
-    //The label which the preview of the file inhabits
-    private JLabel advancedImportPreviewImageLabel;
-    //The preview of the file selected
-    private ImageIcon advancedImportPreviewImage;
-    //The file path of the selected file
-    private String advancedImportFilePath;
-    //The button which confirms the importing of the selected file
-    private JButton advancedImportConfirmButton;
-    //The row of the PixelButton which initiated the advancedDialog
-    private int lastPixelRowNum;
-    //The column of the PixelButton which initiated the advancedDialog
-    private int lastPixelColumnNum;
-    //The button for exporting the final BitMap
+    //A state for whether this editor is connected to other editors
+    private boolean isConnectedEditor;
+    //A checkbox to connect and disconnect the editor from the other editors
+    private JCheckBox connectedCB;
+    //A state for whether to invert edits vertically
+    private boolean isVerticallyInverted;
+    //A checkbox to invert edits vertically
+    private JCheckBox verticalInvertCB;
+    //A state for whether to invert edits horizontally
+    private boolean isHorizontallyInverted;
+    //A checkbox to invert edits horizontally
+    private JCheckBox horizontalInvertCB;
+    //A state for whether to randomize the color of edits
+    private boolean colorIsRandomized;
+    //A checkbox to randomize the color of edits
+    private JCheckBox randomColorCB;
+    //A button to export the BitMap
     private JButton bitMapButton;
 
+
     //Takes in a title for the frame
-    public BitMapGui(String title) {
+    public BitMapGui(String title, IconEdit iconEdit, int numRows, int numColumns) {
         //Sets the title of the frame and defaults other values
         super(title);
         currentColor = Color.BLACK;
-        advancedCbIsChecked = false;
+        isConnectedEditor = true;
+        isVerticallyInverted = false;
+        isHorizontallyInverted = false;
+        colorIsRandomized = false;
+        isSourceOfEdit = false;
         //Initializes the 2d ArrayList of PixelButtons
         pixelButtons = new ArrayList < ArrayList< PixelButton > >();
-        //JOptionPanes prompt the user for the size of the BitMap
-        int numRows = Integer.parseInt(JOptionPane.showInputDialog("Enter the number of rows in the BitMap"));
-        int numColumns = Integer.parseInt(JOptionPane.showInputDialog("Enter the number of columns in the BitMap"));
+        //gets a reference to the one IconEdit instance
+        this.iconEdit = iconEdit;
         //Sets up the grid and icon
         grid = new JPanel();
         grid.setLayout(new GridLayout(numRows, numColumns));
@@ -101,99 +97,35 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
                 pixelButton.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        if(advancedCbIsChecked == false) {
-                            //if it's not advanced, simply set the color to the current color
-                            pixelButton.setBackground(currentColor);
-
-                            //Mirrors this setting in the icon
-                            guiIcon.setPixelRBGValue(pixelButton.getRow(),
-                                    pixelButton.getColumn(),
-                                    currentColor.getRed(),
-                                    currentColor.getGreen(),
-                                    currentColor.getBlue());
-                            lastFiveColorsWidget.addColor(currentColor);
-                        } else {
-                            //If it is advanced, get the source's row and column
-                            PixelButton lastPixel = (PixelButton) e.getSource();
-                            lastPixelRowNum = lastPixel.getRow();
-                            lastPixelColumnNum = lastPixel.getColumn();
-
-                            //Open a modal dialogue
-                            advancedDialog = new JDialog(BitMapGui.this,
-                                                                   "Advanced Color Options",
-                                                                 true);
-                            advancedDialog.setLayout(new GridLayout(1,1 ));
-
-                            //Initialize widgets
-                            JLabel advancedRowNumLabel = new JLabel("Enter the number of rows to fill, starting at row " + Integer.toString(lastPixelRowNum + 1) + ":");
-
-                            advancedRowNumTB = new JTextField("0");
-                            advancedRowNumTB.addActionListener(BitMapGui.this);
-
-                            JLabel advancedColumnNumLabel = new JLabel("Enter the number of columns to fill, starting at column " + Integer.toString(lastPixelColumnNum + 1) + ":");
-
-                            advancedColumnNumTB = new JTextField("0");
-                            advancedColumnNumTB.addActionListener(BitMapGui.this);
-
-                            advancedFillButton = new JButton("Fill");
-                            advancedFillButton.addActionListener(BitMapGui.this);
-
-                            //Panel with the fill widgets
-                            JPanel advancedFillPanel = new JPanel();
-                            advancedFillPanel.setLayout(new GridLayout(5,1));
-                            advancedFillPanel.add(advancedRowNumLabel);
-                            advancedFillPanel.add(advancedRowNumTB);
-                            advancedFillPanel.add(advancedColumnNumLabel);
-                            advancedFillPanel.add(advancedColumnNumTB);
-                            advancedFillPanel.add(advancedFillButton);
-
-                            //Initialize more widgets
-                            JLabel advancedImportLabel = new JLabel("Select a .BMP file to import into the BitMap Editor, starting at row " + Integer.toString(lastPixelRowNum + 1) + " and column " + Integer.toString(lastPixelColumnNum + 1) + ".");
-
-                            advancedImportSelectButton = new JButton("Select File");
-                            advancedImportSelectButton.addActionListener(BitMapGui.this);
-
-                            //Needs a minimum size to be visible in the BorderLayout
-                            advancedImportPreviewImageLabel = new JLabel();
-                            advancedImportPreviewImageLabel.setMinimumSize(new Dimension(100,100));
-                            advancedImportPreviewImageLabel.setPreferredSize(new Dimension(100,100));
-                            advancedImportPreviewImageLabel.setOpaque(true);
-                            advancedImportPreviewImageLabel.setBackground(Color.WHITE);
-
-                            advancedImportConfirmButton = new JButton("Confirm and Import");
-                            advancedImportConfirmButton.addActionListener(BitMapGui.this);
-
-                            //Panel for the select button and its label
-                            JPanel advancedImportSelectPanel = new JPanel();
-                            advancedImportSelectPanel.setLayout(new GridLayout(2,1));
-                            advancedImportSelectPanel.add(advancedImportLabel);
-                            advancedImportSelectPanel.add(advancedImportSelectButton);
-
-                            //Panel for the import widgets
-                            JPanel advancedImportPanel = new JPanel();
-                            advancedImportPanel.setLayout(new BorderLayout());
-                            advancedImportPanel.add(advancedImportSelectPanel, BorderLayout.NORTH);
-                            advancedImportPanel.add(advancedImportPreviewImageLabel, BorderLayout.CENTER);
-                            advancedImportPanel.add(advancedImportConfirmButton, BorderLayout.SOUTH);
-
-                            //Creates tabs within the dialog for fill and import
-                            JTabbedPane advancedTabs = new JTabbedPane();
-                            advancedTabs.add("Fill", advancedFillPanel);
-                            advancedTabs.add("Import BitMap", advancedImportPanel);
-
-                            advancedDialog.add(advancedTabs);
-
-                            //Sets details of dialog
-                            advancedDialog.setSize(500, 400);
-                            advancedDialog.setLocation(425, 200);
-                            advancedDialog.setVisible(true);
-                            advancedDialog.setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
+                        //Sets this GUI to be the source of a given edit
+                        isSourceOfEdit = true;
+                        //Gets the row and column of the edited PixelButton
+                        int row = pixelButton.getRow();
+                        int column = pixelButton.getColumn();
+                        //Sets the edit if this editor is connected to other editors
+                        if(isConnectedEditor) {
+                            iconEdit.setEdit(row, column, currentColor);
                         }
+
+                        //Sets the color of the PixelButton to the currentColor
+                        pixelButtons.get(row).get(column).setBackground(currentColor);
+
+                        //Mirrors this setting in the icon
+                        guiIcon.setPixelRBGValue(row,
+                                column,
+                                currentColor.getRed(),
+                                currentColor.getGreen(),
+                                currentColor.getBlue());
+                        lastFiveColorsWidget.addColor(currentColor);
                     }
                 });
+
+                //Adds this BitMapGui to be a MouseListener for each button
+                pixelButton.addMouseListener(this);
+                //Adds the button to the GUI collection of PixelButtons
                 grid.add(pixelButton);
             }
+            //Adds a row of PixelButtons to the code collection of them
             pixelButtons.add(pixelButtonRow);
         }
 
@@ -243,13 +175,28 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
 
         lastFiveColorsWidget = new LastFiveColors(this);
 
+        //Sets the connected checkbox to be checked by default
+        connectedCB = new JCheckBox("Connected Editor");
+        connectedCB.setToolTipText("Connects edits made in this editor to other connected editors");
+        connectedCB.setSelected(true);
+        connectedCB.addActionListener(this);
+
+        //Sets up the other checkboxes
+        verticalInvertCB = new JCheckBox("Invert Vertically");
+        verticalInvertCB.setToolTipText("Vertically inverts edits made by connected editors");
+        verticalInvertCB.addActionListener(this);
+
+        horizontalInvertCB = new JCheckBox("Invert Horizontally");
+        horizontalInvertCB.setToolTipText("horizontally inverts edits made by connected editors");
+        horizontalInvertCB.addActionListener(this);
+
+        randomColorCB = new JCheckBox("Randomize Color");
+        randomColorCB.setToolTipText("Randomizes the color of edits made by connected editors");
+        randomColorCB.addActionListener(this);
+
+        //Sets up the export button
         bitMapButton = new JButton("Export BitMap");
         bitMapButton.addActionListener(this);
-
-        //Adds a tool tip so the user knows when the advancedCB will change things
-        advancedCB = new JCheckBox("Advanced Color Options");
-        advancedCB.setToolTipText("Allows the user to fill swaths of pixels or import a bitMap into a section of the editor when selecting a pixel");
-        advancedCB.addActionListener(this);
 
         //Adds widgets of different colors to different panels
         JPanel redPanel = new JPanel();
@@ -283,10 +230,18 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
         colorDisplayPanel.add(previewColor, BorderLayout.WEST);
         colorDisplayPanel.add(colorSlidersPanel, BorderLayout.CENTER);
 
-        //Adds checkbox and export button to a panel
+        //Adds checkboxes to a panel
+        JPanel checkboxPanel = new JPanel();
+        checkboxPanel.setLayout(new GridLayout(2, 2));
+        checkboxPanel.add(connectedCB);
+        checkboxPanel.add(randomColorCB);
+        checkboxPanel.add(verticalInvertCB);
+        checkboxPanel.add(horizontalInvertCB);
+
+        //Adds the checkboxPanel and export button to a panel
         JPanel auxiliaryActions = new JPanel();
         auxiliaryActions.setLayout(new GridLayout(1, 2));
-        auxiliaryActions.add(advancedCB);
+        auxiliaryActions.add(checkboxPanel);
         auxiliaryActions.add(bitMapButton);
 
         //Adds various widgets to the window
@@ -297,7 +252,7 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
         add(auxiliaryActions);
 
         //Sets info for window
-        setSize(550, 650);
+        setSize(350, 400);
         setLocation(400, 25);
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -313,12 +268,18 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
     //When the sliders change, update the currentColor based on the slider positions
     @Override
     public void stateChanged(ChangeEvent e) {
-        Color updatedColor = new Color(redSlider.getValue(), greenSlider.getValue(),
+        Color updatedColor = new Color(redSlider.getValue(),
+                                       greenSlider.getValue(),
                                        blueSlider.getValue());
+        //Sets the textboxes for each color to reflect the slider value
+        redTB.setText(String.valueOf(redSlider.getValue()));
+        greenTB.setText(String.valueOf(greenSlider.getValue()));
+        blueTB.setText(String.valueOf(blueSlider.getValue()));
         currentColor = updatedColor;
         previewColor.setBackground(currentColor);
     }
 
+    //Responds to various ActionEvents
     @Override
     public void actionPerformed(ActionEvent e) {
         if(e.getSource() == redTB) {
@@ -339,86 +300,24 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
             if(Integer.parseInt(blueTB.getText()) > 255) {
                 blueTB.setText("255");
             }
-        } else if (e.getSource() == advancedCB) {
+        } else if (e.getSource() == connectedCB) {
             //changes state of checkbox
-            advancedCbIsChecked = !advancedCbIsChecked;
-        } else if (e.getSource() == advancedFillButton) {
-            //Gets appropriate number of rows and columns to fill based on input textboxes
-            //Either the amount entered or to the edge of the grid
-            int userNumRowsToFill = Integer.parseInt(advancedRowNumTB.getText());
-            int userNumColumnsToFill = Integer.parseInt(advancedColumnNumTB.getText());
-            int numRowsToGoThrough = 0;
-            int numColumnsToGoThrough = 0;
-            if (lastPixelRowNum + userNumRowsToFill <= pixelButtons.size()) {
-                numRowsToGoThrough = userNumRowsToFill;
+            isConnectedEditor = !isConnectedEditor;
+            //Attaches/detaches the editor
+            if (isConnectedEditor == false) {
+                iconEdit.detach(BitMapGui.this);
             } else {
-                numRowsToGoThrough = pixelButtons.size() - lastPixelRowNum;
+                iconEdit.attach(BitMapGui.this);
             }
-            if(lastPixelColumnNum + userNumColumnsToFill <= pixelButtons.get(0).size()) {
-                numColumnsToGoThrough = userNumColumnsToFill;
-            }else {
-                numColumnsToGoThrough = pixelButtons.get(0).size() - lastPixelColumnNum;
-            }
-            //Fills using the correct number of rows and columns
-            for (int i = lastPixelRowNum; i < (lastPixelRowNum + numRowsToGoThrough); i++) {
-                for(int j = lastPixelColumnNum; j < (lastPixelColumnNum + numColumnsToGoThrough); j++) {
-                    PixelButton nextPixel = pixelButtons.get(i).get(j);
-                    nextPixel.setBackground(currentColor);
-                    guiIcon.setPixelRBGValue(nextPixel.getRow(),
-                            nextPixel.getColumn(),
-                            currentColor.getRed(),
-                            currentColor.getGreen(),
-                            currentColor.getBlue());
-                }
-            }
-            //adds the color filled with
-            lastFiveColorsWidget.addColor(currentColor);
-        } else if(e.getSource() == advancedImportSelectButton) {
-            //Open a file chooser
-            JFileChooser fileExplorerImport = new JFileChooser(new File("C://"));
-            //Assuming it's good
-            if(fileExplorerImport.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                //Gets the path of a selected file, and creates an ImageIcon from the file which then
-                //was supposed to be set to the label
-                File selectedFile = fileExplorerImport.getSelectedFile();
-                Path filePath = selectedFile.toPath();
-                advancedImportFilePath = filePath.toString();
-                advancedImportPreviewImageLabel.setIcon(new ImageIcon(advancedImportFilePath));
-//                advancedImportPreviewImageLabel = new JLabel(advancedImportPreviewImage);
-//                advancedImportPreviewImageLabel.update(BitMapGui.this.getGraphics());
-            }
-        } else if (e.getSource() == advancedImportConfirmButton) {
-            //Creates a deconstructor based on the file passed in and returns its constructed icon
-            guiBitMapDeconstructor = new BitMapDeconstructor(advancedImportFilePath);
-            Icon iconToImport = guiBitMapDeconstructor.getIcon();
-            //Gets number of rows and columns to go through based on the size of the icon
-            //Either the dimensions of the Icon or to the edges of the grid
-            int numRowsToGoThrough = 0;
-            int numColumnsToGoThrough = 0;
-            if (lastPixelRowNum + iconToImport.numRows <= pixelButtons.size()) {
-                numRowsToGoThrough = iconToImport.numRows;
-            } else {
-                numRowsToGoThrough = pixelButtons.size() - lastPixelRowNum;
-            }
-            if(lastPixelColumnNum + iconToImport.numColumns <= pixelButtons.get(0).size()) {
-                numColumnsToGoThrough = iconToImport.numColumns;
-            }else {
-                numColumnsToGoThrough = pixelButtons.get(0).size() - lastPixelColumnNum;
-            }
-            //Creates a color using the next pixel in the icon, which is then used to recolor the next pixel in the grid
-            for (int i = lastPixelRowNum; i < (lastPixelRowNum + numRowsToGoThrough); i++) {
-                for(int j = lastPixelColumnNum; j < (lastPixelColumnNum + numColumnsToGoThrough); j++) {
-                    PixelButton nextPixelToSet = pixelButtons.get(i).get(j);
-                    Pixel nextImportedPixel = iconToImport.getPixel((i - lastPixelRowNum), (j - lastPixelColumnNum));
-                    Color nextColor = new Color(nextImportedPixel.getRed(), nextImportedPixel.getGreen(), nextImportedPixel.getBlue());
-                    nextPixelToSet.setBackground(nextColor);
-                    guiIcon.setPixelRBGValue(nextPixelToSet.getRow(),
-                            nextPixelToSet.getColumn(),
-                            currentColor.getRed(),
-                            currentColor.getGreen(),
-                            currentColor.getBlue());
-                }
-            }
+        } else if (e.getSource() == verticalInvertCB) {
+            //changes state of checkbox
+            isVerticallyInverted = !isVerticallyInverted;
+        } else if (e.getSource() == horizontalInvertCB) {
+            //changes state of checkbox
+            isHorizontallyInverted = !isHorizontallyInverted;
+        } else if (e.getSource() == randomColorCB) {
+            //changes state of checkbox
+            colorIsRandomized = !colorIsRandomized;
         } else if (e.getSource() == bitMapButton) {
             //Opens a file chooser
             JFileChooser fileExplorerExport = new JFileChooser(new File("C://"));
@@ -428,9 +327,82 @@ public class BitMapGui extends JFrame implements ColorChanger, ChangeListener, A
                 File selectedFile = fileExplorerExport.getSelectedFile();
                 Path filePath = selectedFile.toPath();
                 String pathString = filePath.toString();
-                guiBitMapCreator = new BitMapCreator(guiIcon, pathString);
+                BitMapCreator guiBitMapCreator = new BitMapCreator(guiIcon, pathString);
             }
         }
     }
 
+    @Override
+    public void mouseClicked(MouseEvent e) {
+        //do nothing
+    }
+
+    @Override
+    public void mousePressed(MouseEvent e) {
+        //do nothing
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent e) {
+        //do nothing
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent e) {
+        //If shift is down when a button is entered
+        if(e.isShiftDown()) {
+            //Set the background of the entered button
+            PixelButton enteredButton = (PixelButton) e.getComponent();
+            enteredButton.doClick();
+        }
+    }
+
+    @Override
+    public void mouseExited(MouseEvent e) {
+        //do nothing
+    }
+
+    //Update method for each connected GUI as an Observer
+    @Override
+    public void update() {
+
+        //Only updates if it did not already set its own information
+        //as the source of the edit
+        if(!isSourceOfEdit) {
+            //Creates a temporary IconEditInterface to wrap with 0+ decorators
+            IconEditInterface decoratedIconEdit = iconEdit;
+            //Wraps the temp in the appropriate decorators
+            if (isVerticallyInverted) {
+                int numRows = pixelButtons.size();
+                decoratedIconEdit = new VerticalInvertDecorator(decoratedIconEdit, numRows);
+            }
+            if (isHorizontallyInverted) {
+                int numColumns = pixelButtons.get(0).size();
+                decoratedIconEdit = new HorizontalInvertDecorator(decoratedIconEdit, numColumns);
+            }
+            if (colorIsRandomized) {
+                decoratedIconEdit = new RandomColorDecorator(decoratedIconEdit);
+            }
+
+            //Gets the appropriate row, column, and color to edit with
+            //from the wrapped IconEdit
+            int rowNum = decoratedIconEdit.getRow();
+            int columnNum = decoratedIconEdit.getColumn();
+            Color editColor = decoratedIconEdit.getColor();
+
+            //Sets the color of the PixelButton at the appropriate coordinates
+            //to the appropriate color
+            pixelButtons.get(rowNum).get(columnNum).setBackground(editColor);
+
+            //Mirrors this setting in the icon
+            guiIcon.setPixelRBGValue(rowNum,
+                    columnNum,
+                    editColor.getRed(),
+                    editColor.getGreen(),
+                    editColor.getBlue());
+        } else {
+            //If it was the source, reset its source state to false
+            isSourceOfEdit = false;
+        }
+    }
 }
