@@ -1,4 +1,4 @@
-This project from my object-oriented programming class tasked us with first creating, then editing, and then connecting the edits of a number of bitmaps, using java GUIs to display them. These stages of the project are saved in stage-1, stage-2, and main branches respectively.
+This project from my object-oriented programming class tasked us with first creating, then editing, and then connecting the edits of a number of bitmaps, using java GUIs to display them. These stages of the project are saved in stage-1-project, stage-2-project, and main branches respectively.
 
 In the first stage of the project, we were chiefly concerned with creating and exporting a bitmap created in the driver. This included creating an Icon composed of Pixels which could get and set their color using bitwise operations on a single stored integer, and having a BitMapCreator which could convert the icon to a .BPM file for export. This stage helped introduce me to exporting files in a particular format and highlighted the usefulness of abstracting private method details away (such as the bitwise operations in Pixel).
 
